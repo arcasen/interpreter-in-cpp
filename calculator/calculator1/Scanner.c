@@ -1,4 +1,4 @@
-#define _GNU_SOURCE
+#define _GNU_SOURCE // Resolve 'strndup' in GCC
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

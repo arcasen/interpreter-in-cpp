@@ -1,0 +1,40 @@
+documentclass: ctexbook
+classoption: a4paper,12pt
+# classoption:
+#   - a4paper
+#   - 12pt
+has-frontmatter: true
+# toc-title: Contents
+titlepage: true
+pagestyle: plain
+linkcolor: purple
+listings-disable-line-numbers: true
+geometry:
+  # - a4paper
+  - left=2cm
+  - right=3cm
+  - top=3cm
+  - bottom=3.5cm
+# 直接如下写入 metadata.yaml 时, 会被解析成 "方正楷体\_GBK", 导致编译出错
+# 因为 Pandoc 将 metadata 解析成 Markdown, 而非 literal 文本
+# https://github.com/jgm/pandoc/issues/2139
+# https://github.com/jgm/pandoc/issues/2630
+# https://github.com/jgm/pandoc/issues/2565
+# CJKmainfont: "方正楷体_GBK" # ERROR
+# 方正楷体缺字, 弃用
+# header-includes: |
+#   \setCJKmainfont[BoldFont=NotoSansSC-Bold]{华文楷体}
+#   \setCJKmonofont{方正仿宋_GBK}
+#   \setmainfont{Noto Sans SC}
+#   \setmonofont{Source Han Mono SC}
+#   \raggedbottom
+
+# If true, citations will be hyperlinked to the corresponding bibliography
+# entries (for author-date and numerical styles only). Defaults to false.
+link-citations: true
+
+# Prefixes for pandoc-crossref
+secPrefix: ["§", "§"]
+figPrefix: ["图", "图"]
+tblPrefix: ["表", "表"]
+eqnPrefix: ["式", "式"]

@@ -1,0 +1,70 @@
+# Defaults file used specify a package of options
+# https://pandoc.org/MANUAL.html#defaults-files
+
+# ======================= General options =======================
+from: markdown+emoji
+
+# ======================== Reader options =======================
+shift-heading-level-by: -1
+# Cross Referencing
+# OPTIONS += --filter pandoc-crossref -M listings
+# crossref and citeproc use similar syntax, use pandoc-crossref first
+filters:
+  - striped-table
+  - text-color
+  - latex-environment
+  - pandoc-crossref
+  - citeproc
+  - pageref
+  # - hypertext-reference
+
+# Resolve '! LaTeX Error: Environment lstlisting unenabled.' when
+# using the pandoc-crossref filter together with Eisvogel template
+# https://mickey-happygolucky.hatenablog.com/entry/2022/04/05/012146
+metadata:
+  listings: true
+
+metadata-file: metadata.yaml
+
+# ==================== General writer options ===================
+standalone: true
+# eisvogel.latex should be located in ~/.local/share/pandoc/templates
+# OPTIONS += --template eisvogel
+# OPTIONS += --template=../templates/eisvogel.latex
+# template: eisvogel.latex
+toc: true
+toc-depth: 3
+
+# Include raw code (verbatim)
+# Caution: include-in-header will disable 'header-includes' metadata
+# include-in-header:
+#   - preamble.tex
+# include-before-body:
+#   - include-before.tex
+# include-after-body:
+#   - include-after.tex
+
+# ============= Options affecting specific writers ==============
+top-level-division: chapter
+number-sections: true
+# To process Chinese, you need to use xelatex engine
+pdf-engine: xelatex
+# Option for `minted` package: --shell-escape
+# pdf-engine-opts:
+#   - '-shell-escape'
+
+# Use the listings package for LaTeX code blocks.
+# (default: pandoc's Shaded envrionment)
+listings: true
+# reference-doc: custom-reference.docx
+
+# ====================== Citation rendering =====================
+# bibliography: references.bib
+# download csl styles from https://github.com/citation-style-language/styles
+# store csl styles in ~/.local/share/pandoc/cls (for Debian or macOS)
+# csl styles preview: https://www.zotero.org/styles
+csl: apa.csl
+
+# ==================== Math rendering in HTML ===================
+html-math-method:
+  method: mathjax
