@@ -5,12 +5,13 @@ https://docs.python.org/3/reference/grammar.html
 
 ## Grammar
 
+```
 expr    ::= term { ( + | - ) term }
 term    ::= unary { ( * | / ) unary }
 unary   ::= ( + | - ) unary | power
-power   ::= factor { '^' unary }  # 一元在这里处理
+power   ::= factor { '^' unary }  
 factor  ::= ( expr ) | integer | float
-
+```
 
 Token list 采用双向链表
 因为解析负数时需要向前看 2 个 Token
