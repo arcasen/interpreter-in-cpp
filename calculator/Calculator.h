@@ -6,12 +6,13 @@
 typedef struct Calculator {
     const char* expression;
     Parser* parser;
-    int ans;
+    double ans;
     int status; // 1 for success, 0 for failure
 } Calculator;
 
-Calculator* create_calculator(const char* expression);
-int calculate(Calculator* calculate);
-void free_calculator(Calculator* calculate);
+Calculator* create_calculator();
+void initialize(Calculator* calculator, const char* expression);
+double calculate(Calculator* calculator);
+void free_calculator(Calculator* calculator);
 
 #endif

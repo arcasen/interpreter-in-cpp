@@ -2,3 +2,4 @@
 .depends/
 *.o
 dist/
+.repl_history

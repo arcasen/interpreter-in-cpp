@@ -11,7 +11,7 @@ typedef struct Calculator {
 } Calculator;
 
 Calculator* create_calculator(const char* expression);
-double calculate(Calculator* calculate);
-void free_calculator(Calculator* calculate);
+double calculate(Calculator* calculator);
+void free_calculator(Calculator* calculator);
 
 #endif

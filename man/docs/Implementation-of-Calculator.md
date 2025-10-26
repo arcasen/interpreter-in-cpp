@@ -1,6 +1,6 @@
 ---
 documentclass: ctexbook
-title: 算术计算器的实现
+title: 用 C 语言实现计算器
 author: arcasen
 publisher: <https://github.com/arcasen/interpreter-in-cpp>
 # title-page: title-page.tex
@@ -16,3 +16,7 @@ lang: zh
 ![[ chapters/3-error-recovery.md ]]
 
 ![[ chapters/4-extended-operations.md ]]
+
+![[ chapters/5-function-call.md ]]
+
+![[ chapters/6-repl.md ]]

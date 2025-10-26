@@ -6,11 +6,11 @@ https://docs.python.org/3/reference/grammar.html
 ## Grammar
 
 ```
-expr    ::= term { ( + | - ) term }
-term    ::= unary { ( * | / ) unary }
-unary   ::= ( + | - ) unary | power
-power   ::= factor { '^' unary }  
-factor  ::= ( expr ) | integer | float
+expr   ::= term { ( + | - ) term }
+term   ::= unary { ( * | / ) unary }
+unary  ::= ( + | - ) unary | power
+power  ::= factor { '^' unary }  
+factor ::= ( expr ) | integer | float
 ```
 
 Token list 采用双向链表

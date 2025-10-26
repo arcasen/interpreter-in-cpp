@@ -1,15 +1,31 @@
-# Implementation of an Interpreter
+# Implementation of an Calculator
 
 ## Introduction
 
-A C/C++ implementation of interpreter for the bellowing syntax:
+A C/C++ implementation of calculator (REPL) for the bellowing syntax:
 
 ```
-expr    ::= term { ( + | - ) term }
-term    ::= unary { ( * | / ) unary }
-unary   ::= ( + | - ) unary | power
-power   ::= factor { '^' unary }  
-factor  ::= ( expr ) | integer | float
+expr   ::= term { ( + | - ) term }
+term   ::= unary { ( * | / ) unary }
+unary  ::= ( + | - ) unary | power
+power  ::= factor { ^ unary }  
+factor ::= ( expr ) | id ( expr ) | id | integer | float
+id     ::= [a-zA-Z]+[0-9]*
+```
+
+## Usage
+
+Run calculator and iput expression in REPL:
+
+```
+ ./calc
+Welcome to the Enhanced Calculator! Enter 'exit' to exit.
+> 1-2
+ans: -1.000000
+> sin(pi/4)
+ans: 0.707107
+> exit
+Bye.
 ```
 
 ## References

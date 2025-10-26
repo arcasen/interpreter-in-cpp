@@ -1,3 +1,7 @@
+// 引入乘法运算后, 由于在解析 -3^2 这样的式子是 - 不能与 3 结合, 不能读出 -3 
+// 在文法中去掉正负号的处理 (sign)
+// 把正负号当做一元运算处理
+
 #define _GNU_SOURCE // Resolve 'strndup' in GCC
 #include <stdlib.h>
 #include <string.h>
@@ -118,42 +122,42 @@ Scanner* create_scanner(const char* expression) {
 }
 
 // 当新增加数字到 Token 链表时, 处理是否存在符号 
-void process_sign(Scanner* scanner) {
-    // printf("FUNCTION %-15s: current: %s\n", __func__,
-    //     scanner->token_list->tail->token->literal);
-    TokenListNode* last1st = NULL;
-    TokenListNode* last2nd = NULL;
-    TokenListNode* last3rd = NULL;
-    last1st = scanner->token_list->tail; // new INTEGER token
-    last2nd = last1st->prev;
+// void process_sign(Scanner* scanner) {
+//     // printf("FUNCTION %-15s: current: %s\n", __func__,
+//     //     scanner->token_list->tail->token->literal);
+//     TokenListNode* last1st = NULL;
+//     TokenListNode* last2nd = NULL;
+//     TokenListNode* last3rd = NULL;
+//     last1st = scanner->token_list->tail; // new INTEGER token
+//     last2nd = last1st->prev;
     
-    if (!last2nd || (last2nd->token->type != PLUS && 
-            last2nd->token->type != MINUS)) 
-        return;
+//     if (!last2nd || (last2nd->token->type != PLUS && 
+//             last2nd->token->type != MINUS)) 
+//         return;
     
-    last3rd = last2nd->prev;
-    if (last3rd) {
-        Token* t = last3rd->token;
-        if (!(t->type == LPAREN || t->type == PLUS ||
-                t->type == MINUS || t->type == MULT || 
-                t->type == DIV)) {
-            return;
-        }
-    }
+//     last3rd = last2nd->prev;
+//     if (last3rd) {
+//         Token* t = last3rd->token;
+//         if (!(t->type == LPAREN || t->type == PLUS ||
+//                 t->type == MINUS || t->type == MULT || 
+//                 t->type == DIV)) {
+//             return;
+//         }
+//     }
     
-    //创建新 INTEGER Token, 并删除原来的最后两个 Token
-    int position = last2nd->token->position;
-    int size = strlen(last1st->token->literal) +
-        strlen(last2nd->token->literal);
+//     //创建新 INTEGER Token, 并删除原来的最后两个 Token
+//     int position = last2nd->token->position;
+//     int size = strlen(last1st->token->literal) +
+//         strlen(last2nd->token->literal);
     
-    int type = last1st->token->type;
-    Token* token = create_token(type, scanner->expression, position, size);
-    remove_last(scanner->token_list); 
-    free_list_node(last1st);
-    remove_last(scanner->token_list);
-    free_list_node(last2nd);
-    append_token(scanner->token_list, create_list_node(token));
-}
+//     int type = last1st->token->type;
+//     Token* token = create_token(type, scanner->expression, position, size);
+//     remove_last(scanner->token_list); 
+//     free_list_node(last1st);
+//     remove_last(scanner->token_list);
+//     free_list_node(last2nd);
+//     append_token(scanner->token_list, create_list_node(token));
+// }
 
 void tokonize(Scanner* scanner) {
     const char* expression = scanner->expression;
@@ -179,7 +183,7 @@ void tokonize(Scanner* scanner) {
             char *endptr;
             strtod(str, &endptr);
             type = INTEGER; 
-            for (char *p = str; p < endptr; p++) {
+            for (const char *p = str; p < endptr; p++) {
                 if (*p == '.' || *p == 'e' || *p == 'E') {
                     type = FLOAT;
                     break;
@@ -193,6 +197,7 @@ void tokonize(Scanner* scanner) {
                 case '-': type = MINUS; break;
                 case '*': type = MULT; break;
                 case '/': type = DIV; break;
+                case '^': type = POW; break;
                 case '(': type = LPAREN; break;
                 case ')': type = RPAREN; break;
                 default:
@@ -210,9 +215,9 @@ void tokonize(Scanner* scanner) {
         if (type != EOL) {
             token = create_token(type, expression, start, position-start);
             append_token(scanner->token_list, create_list_node(token));
-            if (type == FLOAT || type == INTEGER) { // 处理是否存在符号
-                process_sign(scanner);
-            } 
+            // if (type == FLOAT || type == INTEGER) { // 处理是否存在符号
+            //     process_sign(scanner);
+            // } 
         }       
     }
 

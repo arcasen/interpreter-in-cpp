@@ -177,20 +177,27 @@ void tokonize(Scanner* scanner) {
         TokenType type = EOL;
         int start = position;
         char ch = expression[position];
-        if (isdigit(ch)) {
+        if (isalpha(ch)) {
+            // Parse identifier literal
+            while (isalpha(expression[position]) || 
+                    isdigit(expression[position])) {
+                position++;
+            }
+            type = ID; 
+        } else if (isdigit(ch)) {
             // Parse number literal
             const char* str = expression+position;
             char *endptr;
             strtod(str, &endptr);
             type = INTEGER; 
-            for (char *p = str; p < endptr; p++) {
+            for (const char *p = str; p < endptr; p++) {
                 if (*p == '.' || *p == 'e' || *p == 'E') {
                     type = FLOAT;
                     break;
                 }
             }
             position = (endptr - str) + start;
-        } else {
+        }else {
             // Operators and parentheses
             switch (ch) {
                 case '+': type = PLUS; break;
