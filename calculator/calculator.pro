@@ -3,6 +3,8 @@
 # Makefile will include this project file
 ############################################################
 
+#CFLAGS += -D_USE_MATH_DEFINES
+
 # Specify library
 LDFLAGS += -lreadline -lm
 

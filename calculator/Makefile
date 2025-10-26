@@ -22,7 +22,7 @@ debug: $(TARGET)
 
 # Build targets
 $(TARGET): $(OBJECTS)
-	$(LINK.c) -o $@ $^ 
+	$(LINK.c) -o $@ $^ $(LDFLAGS) 
 
 %.o: %.c
 	$(COMPILE.c) $(INCLUDE) -O2 -MMD -MP -MF .depends/$@.d -o $@ $<

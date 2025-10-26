@@ -1,8 +1,17 @@
+//#define _USE_MATH_DEFINES
+
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <strings.h>
 #include <math.h>
 #include "Calculator.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#ifndef M_E
+#define M_E 2.71828182845904523536
+#endif
 
 double eval(Calculator* calculator, AstNode* ast);
 double perform_operation(Calculator* calculator, AstNode* ast);
@@ -19,7 +28,7 @@ Calculator* create_calculator() {
 }
 
 void free_calculator(Calculator* calculator) {
-    free_parser(calculator->parser);
+    if (calculator->parser) free_parser(calculator->parser);
     free(calculator);
 }
 
