@@ -6,7 +6,7 @@
 // Declarations
 void advance(Parser* parser);
 int expect(Parser* parser, TokenType expected);
-void syntax_error(Parser* parser, const char* msg);
+void report_error(Parser* parser, const char* msg);
 AstNode* parse_expr(Parser* parser);
 AstNode* parse_term(Parser* parser);
 AstNode* parse_power(Parser* parser);
@@ -92,6 +92,12 @@ Parser* create_parser(const char* expression) {
     parser->status = 1;
     tokonize(parser->scanner);
     parser->curr = parser->scanner->token_list->head;
+
+    #ifdef DEBUG
+    printf("\nScanner status: %d\n", parser->scanner->status);
+    print_list(parser->scanner->token_list);
+    #endif
+
     return parser; 
 }
 
@@ -99,13 +105,16 @@ void parse(Parser* parser) {
     if (parser->scanner->status) {
         parser->ast = parse_expr(parser);
         if (parser->curr && parser->curr->token->type != EOL) {
-            syntax_error(parser, "Unexpected symbol");
+            report_error(parser, "Unexpected symbol");
         }
     } else {
         parser->ast = NULL;
         parser->status = 0; 
     }
-    
+
+    #ifdef DEBUG
+    printf("\nParser status: %d\n", parser->status);
+    #endif
 }
 
 void free_parser(Parser* parser) {
@@ -129,22 +138,34 @@ int expect(Parser* parser, TokenType expected) {
 }
 
 // Report syntax error
-void syntax_error(Parser* parser, const char* msg) {
+void report_error(Parser* parser, const char* msg) {
+    // if (!parser->status) return; // already reported
     parser->status = 0;
-    int position = strlen(parser->expression);
-    if (parser->curr) {
-        position = parser->curr->token->position + 1;
+    if (parser->curr && parser->curr->token->type != EOL) {
+        int position = parser->curr->token->position + 1;
+        fprintf(stderr, 
+            "Syntax Error: %s near '%s' at position: %d\n", 
+            msg, parser->curr->token->literal, position);
+    } else {
+        int position = strlen(parser->expression) + 1;
+        fprintf(stderr, "Syntax Error: %s at position: %d\n", msg, position);
     }
-    fprintf(stderr, "Syntax Error: %s at position: %d\n", msg, position);
-    // 垃圾处理：panic-mode 恢复，跳过到同步点（运算符、右括号或 EOF）
+}
+
+int is_in_set(TokenType type, TokenType followset[], int set_size) {
+    for (int i = 0; i < set_size; i++) {
+        if (type == followset[i])
+            return 1;
+    }
+    return 0;
+}
+
+// Painic mode error recovery
+void error_recovery(Parser* parser, TokenType followset[], int set_size) {
+    parser->status = 0;
+    // 垃圾处理：panic-mode 恢复，跳过到同步点（该非终结点的 FLLOW 集）
     while (parser->curr && 
-            parser->curr->token->type != PLUS && 
-            parser->curr->token->type != MINUS &&
-            parser->curr->token->type != MULT && 
-            parser->curr->token->type != DIV &&
-            parser->curr->token->type != POW &&
-            parser->curr->token->type != RPAREN && 
-            parser->curr->token->type != EOL) {
+            !is_in_set(parser->curr->token->type, followset, set_size)) {
         advance(parser);
     }
 }
@@ -154,6 +175,9 @@ AstNode* parse_expr(Parser* parser) {
     #ifdef DEBUG
     debug(__func__, parser);
     #endif
+
+    TokenType followset[] = {LPAREN, EOL};
+    int set_size = sizeof(followset) / sizeof(followset[0]);
 
     AstNode* left = parse_term(parser);
     if (!left) return NULL;
@@ -169,10 +193,11 @@ AstNode* parse_expr(Parser* parser) {
             add_child(operator, right);
             left = operator; // new left 
         } else {
-            syntax_error(parser, "Expected right operand after '+' or '-'");
+            report_error(parser, "Expected right operand");
+            error_recovery(parser, followset, set_size);
         }
     }
-    
+
     return left;
 }
 
@@ -181,6 +206,9 @@ AstNode* parse_term(Parser* parser) {
     #ifdef DEBUG
     debug(__func__, parser);
     #endif
+
+    TokenType followset[] = {PLUS, MINUS, LPAREN, EOL};
+    int set_size = sizeof(followset) / sizeof(followset[0]);
 
     AstNode* left = parse_unary(parser);
     if (!left) return NULL;
@@ -196,7 +224,8 @@ AstNode* parse_term(Parser* parser) {
             add_child(operator, right);
             left = operator; // new left 
         } else {
-            syntax_error(parser, "Expected right operand after '*' or '/'");
+            report_error(parser, "Expected right operand");
+            error_recovery(parser, followset, set_size);
         }
     }
     
@@ -209,19 +238,23 @@ AstNode* parse_unary(Parser* parser) {
     debug(__func__, parser);
     #endif
 
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
+    int set_size = sizeof(followset) / sizeof(followset[0]);
+
     AstNode* left = NULL;
 
     if (parser->curr && (parser->curr->token->type == PLUS || 
             parser->curr->token->type == MINUS)) {
         Token* token = parser->curr->token;
         advance(parser);
-        AstNode* right = parse_power(parser);
+        AstNode* right = parse_unary(parser);
         if (right) {
             AstNode* operator = create_ast_node(token); 
             add_child(operator, right);
             left = operator;
         } else {
-            syntax_error(parser, "Expected unary operand after '+' or '-'");
+            report_error(parser, "Expected unary operand");
+            error_recovery(parser, followset, set_size);
         }
     } else {
         left = parse_power(parser);
@@ -236,6 +269,9 @@ AstNode* parse_power(Parser* parser) {
     debug(__func__, parser);
     #endif
 
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
+    int set_size = sizeof(followset) / sizeof(followset[0]);
+
     AstNode* left = parse_factor(parser);
 
     if (parser->curr && (parser->curr->token->type == POW)) {
@@ -248,7 +284,8 @@ AstNode* parse_power(Parser* parser) {
             add_child(operator, right);
             left = operator;
         } else {
-            syntax_error(parser, "Expected right operand after '^'");
+            report_error(parser, "Expected right operand");
+            error_recovery(parser, followset, set_size);
         }
     }
     
@@ -261,8 +298,11 @@ AstNode* parse_factor(Parser* parser) {
     debug(__func__, parser);
     #endif
 
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
+    int set_size = sizeof(followset) / sizeof(followset[0]);
+
     if (!parser->curr) {
-        syntax_error(parser, "Unexpected EOL");
+        report_error(parser, "Terminated abnormally");
         return NULL;
     }
 
@@ -282,10 +322,10 @@ AstNode* parse_factor(Parser* parser) {
             advance(parser);
             return node;
         } else {
-            syntax_error(parser, "Expected ')'");
+            report_error(parser, "Expected ')'");
+            error_recovery(parser, followset, set_size);
             return node;  // 返回已解析的部分
         }
-        
     } else if (token->type == ID) {
         TokenListNode* next_token = parser->curr->next;
 
@@ -299,7 +339,8 @@ AstNode* parse_factor(Parser* parser) {
                 advance(parser);
                 return node;
             } else {
-                syntax_error(parser, "Expected function argument(s)");
+                report_error(parser, "Expected ')'");
+                error_recovery(parser, followset, set_size);
                 return node;  // 返回已解析的部分
             } 
         } else { // constant
@@ -308,7 +349,8 @@ AstNode* parse_factor(Parser* parser) {
             return node;
         }
     } else {
-        syntax_error(parser, "Expected number or '('");
+        report_error(parser, "Expected number or '('");
+        error_recovery(parser, followset, set_size);
         return NULL;
     }
     return NULL;

@@ -1,6 +1,6 @@
 ---
 documentclass: ctexbook
-title: 计算器设计
+title: 表达式计算器设计
 author: arcasen
 publisher: <https://github.com/arcasen/interpreter-in-cpp>
 # title-page: title-page.tex

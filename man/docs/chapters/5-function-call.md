@@ -97,3 +97,90 @@ C 语言的标准数学库函数主要定义在 `<math.h>` 头文件中。大多
 使用时需包含 `#include <math.h>`，并在链接时添加 `-lm`（Linux/Unix）。
 
 :::
+
+### 文法分析
+
+给定的文法为（假设起始符号为 `expr`，终结符包括 `+`、`−`、`*`、`/`、`^`、`(`、`）`、`id`、`integer`、`float`，并引入结束符 `$`）：
+
+- `expr ::= term { ( + | - ) term }`
+- `term ::= unary { ( * | / ) unary }`
+- `unary ::= ( + | - ) unary | power`
+- `power ::= factor { ^ unary }`
+- `factor ::= ( expr ) | id ( expr ) | id | integer | float`
+
+该文法无 `ε`-产生式（空产生式），无左递归。以下逐步说明计算 FIRST 集和 FOLLOW 集的过程。计算基于标准算法：
+
+#### FIRST 集计算步骤
+
+FIRST(X) 表示从非终结符 X 导出的串的可能首终结符集合。算法：
+
+1. 对于每个产生式 `A → α`（`α` 为右部符号序列），将 FIRST(`α` 的第一个符号)（减去 `ε`）加入 FIRST(A)。
+2. 如果 `α` 的前缀可空（nullable），则继续向后符号添加 FIRST。
+3. 迭代直到固定点（无变化）。
+4. 重复和可选部分 `{ β }`（`β` 为非空）对 FIRST 无影响（因为可选且在首位后），只需关注首位符号的 FIRST。
+
+- **FIRST(factor)**：产生式为 `( expr )`（首 `(`）、`id ( expr )`（首 `id`）、`id`（首 `id`）、`integer`（首 `integer`）、`float`（首 `float`）。 
+   
+  FIRST(factor) = `{ (, id, integer, float }`。
+
+- **FIRST(power)**：`power → factor { ^ unary }`（首位 `factor`，可选部分不影响）。
+    
+  FIRST(power) = FIRST(factor) = `{ (, id, integer, float }`。
+
+- **FIRST(unary)**：产生式为 `+ unary`（首 `+`）、`− unary`（首 `−`）、power（首位 power）。  
+  
+  FIRST(unary) = `{ +, − }` $\cup$ FIRST(power) = `{ +, −, (, id, integer, float }`。
+
+- **FIRST(term)**：`term → unary { ( * | / ) unary }`（首位 unary）。 
+   
+  FIRST(term) = FIRST(unary) = `{ +, −, (, id, integer, float }`。
+
+- **FIRST(expr)**：`expr → term { ( + | - ) term }`（首位 term）。
+    
+  FIRST(expr) = FIRST(term) = `{ +, −, (, id, integer, float }`。
+
+#### FOLLOW 集计算步骤
+
+FOLLOW(A) 表示可能紧跟在 A 后的终结符集合（包括 `$`）。算法：
+
+1. FOLLOW(起始符号) $\supseteq$ `{ $ }`。
+2. 对于每个产生式 `B → α A β`，将 FIRST(`β`)（减去 `ε`）加入 FOLLOW(A)；若 `β` 可空，则将 FOLLOW(B) 加入 FOLLOW(A)。
+3. 对于可选/重复部分 `{ γ }`（`γ` 非空），在重复位置后添加 FIRST(`γ`) 和 FOLLOW(所在非终结符)。
+4. 迭代直到固定点。
+
+假设起始符号 `expr`，初始 FOLLOW(expr) = `{ $ }`。
+
+- **FOLLOW(factor)**：factor 仅出现在 `power → factor { ^ unary }`。  
+  `{ ^ unary }` 可空，故 FOLLOW(factor) $\supseteq$ FOLLOW(power)；同时 $\supseteq$ FIRST(`^` unary) = `{ ^ }`。 （后续计算 FOLLOW(power)，此处暂记）。
+
+- **FOLLOW(power)**：power 仅出现在 `unary → power`，故 FOLLOW(power) $\supseteq$ FOLLOW(unary)。在 power 的重复 `{ ^ unary }` 中，unary 后为 `^` 或 power 结束，故 FOLLOW(unary) $\supseteq$  `{ ^ }` ∪ FOLLOW(power)。（循环依赖，后续统一）。
+
+- **FOLLOW(unary)**：unary 出现在：  
+  - `unary → + unary / − unary`：内层 unary 后为外层 unary，故 FOLLOW(unary) 传播自身。  
+  - `term → unary { ( * | / ) unary }`：首位 unary 后可选部分可空，故 FOLLOW(unary) $\supseteq$ FOLLOW(term)；重复中 unary 后为 `* /` 或 term 结束，故 $\supseteq$ `{ *, / }` ∪ FOLLOW(term)。  
+  - power 的重复中：如上，$\supseteq$ `{ ^ }` $\cup$ FOLLOW(power)。（后续计算 FOLLOW(term)）。
+
+- **FOLLOW(term)**：term 出现在：  
+  - `expr → term { ( + | - ) term }`：首位 term 后可选部分可空，故 FOLLOW(term) $\supseteq$ FOLLOW(expr)；重复中 term 后为 + − 或 expr 结束，故 $\supseteq$ `{ +, − }` ∪ FOLLOW(expr)。  
+  （FOLLOW(expr) 已知）。
+
+- **FOLLOW(expr)**：expr 出现在 factor → ( expr ) / id ( expr )，expr 后均为 `)`，故 FOLLOW(expr) $\supseteq$ `{ ) }`。结合起始，FOLLOW(expr) = `{ $, ) }`。
+
+现在迭代传播：  
+
+- FOLLOW(term) = `{ +, − }` ∪ FOLLOW(expr) = `{ +, −, $, ) }`。  
+- FOLLOW(unary) = `{ *, / }` ∪ `{ ^ }` ∪ FOLLOW(term) = `{ *, /, ^, +, −, $, ) }`。  
+- FOLLOW(power) = FOLLOW(unary) = `{ +, −, *, /, ^, $, ) }`。  
+- FOLLOW(factor) = `{ ^ }` ∪ FOLLOW(power) = `{ +, −, *, /, ^, $, ) }`（^ 已包含）。
+
+#### 结果汇总
+
+| 非终结符 | FIRST 集                          | FOLLOW 集                 |
+| -------- | --------------------------------- | ------------------------- |
+| expr     | `{ +, −, (, id, integer, float }` | `{ $, ) }`                |
+| term     | `{ +, −, (, id, integer, float }` | `{ +, −, $, ) }`          |
+| unary    | `{ +, −, (, id, integer, float }` | `{ +, −, *, /, ^, $, ) }` |
+| power    | `{ (, id, integer, float }`       | `{ +, −, *, /, ^, $, ) }` |
+| factor   | `{ (, id, integer, float }`       | `{ +, −, *, /, ^, $, ) }` |
+
+该文法满足 LL(1) 条件（FIRST 集两两不相交，FOLLOW 中无冲突），可用于自顶向下解析。

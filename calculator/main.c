@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 
     Calculator* calculator = create_calculator();
 
-    printf("Welcome to the Enhanced Calculator!\nEnter 'exit' to exit.\n");
+    printf("Welcome to the expression calculator!\nEnter 'exit' to exit.\n");
 
     while ((line = readline("> ")) != NULL) {
         // 添加空行跳过

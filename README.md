@@ -1,4 +1,4 @@
-# Implementation of an Enhanced Calculator
+# Implementation of an Expression Calculator
 
 ## Introduction
 
@@ -14,11 +14,11 @@ factor ::= ( expr ) | id ( expr ) | id | integer | float
 
 ## Usage
 
-Run calculator and iput expression in REPL:
+Run calculator and input expression in REPL:
 
 ```
  ./calc
-Welcome to the Enhanced Calculator.
+Welcome to the expression calculator.
 Enter 'exit' to exit.
 > 1-2
 ans: -1
@@ -32,12 +32,12 @@ Bye.
 
 - Built-in constants: `pi`, `e`, `phi`, `ans`.
 - Built-in functions: 
-  - Trigonometric functions: sin, cos, tan, asin, acos, atan.
-  - Hyperbolic functions: sinh, cosh, tanh, asinh, acosh, atanh.
-  - Exponential and logarithmic functions: exp, log, log10, log2.
-  - Root functions: sqrt, cbrt.
-  - Rounding functions: ceil, floor.
-  - Absolute value function: fabs.
+  - Trigonometric functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`.
+  - Hyperbolic functions: `sinh`, `cosh`, `tanh`, `asinh`, `acosh`, `atanh`.
+  - Exponential and logarithmic functions: `exp`, `log`, `log10`, `log2`.
+  - Root functions: `sqrt`, `cbrt`.
+  - Rounding functions: `ceil`, `floor`.
+  - Absolute value function: `fabs`.
 
 ## References
 1. [Robert Nystrom, Crafting Interpreters](https://craftinginterpreters.com/)
