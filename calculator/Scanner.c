@@ -28,7 +28,8 @@ Token* create_eol_token(int position) {
 }
 
 void free_token(Token* token) {
-    free(token->literal);
+    if (token)
+        free(token->literal);
     free(token);
 }
 
@@ -54,8 +55,8 @@ TokenListNode *create_list_node(Token *token) {
 }
 
 void free_list_node(TokenListNode* node) {
-    if (node == NULL) return;
-    free_token(node->token);
+    if (node) 
+        free_token(node->token);
     free(node);
 }
 
@@ -234,7 +235,7 @@ void tokonize(Scanner* scanner) {
 }
 
 void free_scanner(Scanner* scanner) {
-    if (scanner == NULL) return;
-    free_list(scanner->token_list);
+    if (scanner)
+        free_list(scanner->token_list);
     free(scanner);
 }

@@ -76,14 +76,12 @@ void print_ast(AstNode* root) {
 
 // Destroy AST
 void free_ast(AstNode* ast) {
-    if (ast == NULL) {
-        return;
+    if (ast) {
+        // Destroy recursively
+        free_ast(ast->firstChild);
+        free_ast(ast->nextSibling);
+        free(ast);
     }
-    
-    // Destroy recursively
-    free_ast(ast->firstChild);
-    free_ast(ast->nextSibling);
-    free(ast);
 }
 
 Parser* create_parser(const char* expression) {
@@ -111,9 +109,11 @@ void parse(Parser* parser) {
 }
 
 void free_parser(Parser* parser) {
-    free_scanner(parser->scanner);
-    free_ast(parser->ast);
-    free(parser);
+    if (parser) {
+        free_scanner(parser->scanner);
+        free_ast(parser->ast);
+        free(parser);
+    }
 }
 
 void advance(Parser* parser) {

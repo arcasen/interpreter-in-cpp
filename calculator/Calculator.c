@@ -7,10 +7,13 @@
 #include "Calculator.h"
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI  3.1415926535897932384626434
 #endif
 #ifndef M_E
-#define M_E 2.71828182845904523536
+#define M_E   2.7182818284590452353602875
+#endif
+#ifndef M_PHI
+#define M_PHI 1.6180339887498948482045868
 #endif
 
 double eval(Calculator* calculator, AstNode* ast);
@@ -28,28 +31,31 @@ Calculator* create_calculator() {
 }
 
 void free_calculator(Calculator* calculator) {
-    if (calculator->parser) free_parser(calculator->parser);
-    free(calculator);
+    if (calculator) {
+        free_parser(calculator->parser);
+        free(calculator);
+    }
 }
 
-void initialize(Calculator* calculator, const char* expression) {
+void recreate_parser(Calculator* calculator, const char* expression) {
     // Release previous parser
     if (calculator->parser) {
         free_parser(calculator->parser);
         calculator->parser = NULL;
     }
     calculator->status = 1;
-    calculator->ans = 0.0;
+    // calculator->ans = 0.0; // keep previous answer
     calculator->expression = expression;
     calculator->parser = create_parser(expression);
     parse(calculator->parser);
-    // printf("parser status: %d\n", calculator->parser->status);
 }
 
 double calculate(Calculator* calculator) {
     double ans = 0.0;
     if (calculator->parser && calculator->parser->status) {
         ans = eval(calculator, calculator->parser->ast);
+        if (calculator->status) 
+            calculator->ans= ans; // update
     } else {
         calculator->status = 0;
     } 
@@ -152,8 +158,10 @@ double function_call(Calculator* calculator, AstNode* ast) {
         fprintf(stderr, "Unkown function: %s!\n", ast->token->literal);
         calculator->status = 0;
     }
+
     double arg = eval(calculator, ast->firstChild);
-    if (calculator->status) return sin(arg);
+    if (calculator->status) 
+        return func_ptr(arg);
     return 0.0;
 }
 
@@ -164,6 +172,8 @@ double fetch_constant(Calculator* calculator, AstNode* ast) {
         return M_PI;
     } else if (strcasecmp(ast->token->literal, "e") == 0) {
         return M_E;
+    } else if (strcasecmp(ast->token->literal, "phi") == 0) {
+        return M_PHI;
     } else {
         fprintf(stderr, "Unkown constant name: %s!\n", ast->token->literal);
         calculator->status = 0;

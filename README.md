@@ -1,4 +1,4 @@
-# Implementation of an Calculator
+# Implementation of an Enhanced Calculator
 
 ## Introduction
 
@@ -10,7 +10,6 @@ term   ::= unary { ( * | / ) unary }
 unary  ::= ( + | - ) unary | power
 power  ::= factor { ^ unary }  
 factor ::= ( expr ) | id ( expr ) | id | integer | float
-id     ::= [a-zA-Z]+[0-9]*
 ```
 
 ## Usage
@@ -19,14 +18,26 @@ Run calculator and iput expression in REPL:
 
 ```
  ./calc
-Welcome to the Enhanced Calculator! Enter 'exit' to exit.
+Welcome to the Enhanced Calculator.
+Enter 'exit' to exit.
 > 1-2
-ans: -1.000000
+ans: -1
 > sin(pi/4)
 ans: 0.707107
 > exit
 Bye.
 ```
+
+## Features
+
+- Built-in constants: `pi`, `e`, `phi`, `ans`.
+- Built-in functions: 
+  - Trigonometric functions: sin, cos, tan, asin, acos, atan.
+  - Hyperbolic functions: sinh, cosh, tanh, asinh, acosh, atanh.
+  - Exponential and logarithmic functions: exp, log, log10, log2.
+  - Root functions: sqrt, cbrt.
+  - Rounding functions: ceil, floor.
+  - Absolute value function: fabs.
 
 ## References
 1. [Robert Nystrom, Crafting Interpreters](https://craftinginterpreters.com/)

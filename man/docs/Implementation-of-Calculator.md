@@ -1,6 +1,6 @@
 ---
 documentclass: ctexbook
-title: 用 C 语言实现计算器
+title: 计算器设计
 author: arcasen
 publisher: <https://github.com/arcasen/interpreter-in-cpp>
 # title-page: title-page.tex

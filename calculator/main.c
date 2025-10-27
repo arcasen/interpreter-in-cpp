@@ -2,6 +2,7 @@
 #include <stdlib.h>
 //#define _GNU_SOURCE
 #include <strings.h>
+#include <math.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "Scanner.h"
@@ -10,6 +11,10 @@
 
 #define HISTFILE ".repl_history"  // 历史文件路径
 #define MAX_HIST 100              // 最大历史记录数
+
+int is_integer(double a) {
+    return floor(a) == a; // 表示无小数部分
+}
 
 int main(int argc, char* argv[]) {
     char *line;
@@ -21,7 +26,7 @@ int main(int argc, char* argv[]) {
 
     Calculator* calculator = create_calculator();
 
-    printf("Welcome to the Enhanced Calculator! Enter 'exit' to exit.\n");
+    printf("Welcome to the Enhanced Calculator!\nEnter 'exit' to exit.\n");
 
     while ((line = readline("> ")) != NULL) {
         // 添加空行跳过
@@ -44,13 +49,17 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        initialize(calculator, line);
+        recreate_parser(calculator, line);
 
         double ans = calculate(calculator);
         if (calculator->status) {
             // printf("Postfix notation: ");
             // print_ast(calculator->parser->ast); 
-            printf("ans: %lf\n", ans);
+            if (is_integer(ans)) {
+                printf("ans: %.0f\n", ans);
+            } else {
+                printf("ans: %f\n", ans);
+            }   
         }
 
         free(line);

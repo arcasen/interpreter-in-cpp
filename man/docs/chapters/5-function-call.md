@@ -1,6 +1,6 @@
 ## 增加数学函数与常量
 
-### 支持函数调用与常量文法
+### 修改后的文法
 
 ```
 expr   ::= term { ( + | - ) term }
@@ -11,11 +11,23 @@ factor ::= ( expr ) | id ( expr ) | id | integer | float
 id     ::= [a-zA-Z]+[0-9]*
 ```
 
-支持的常量有 `pi` 和 `e`，以及计算器上一次计算结果 `ans`。
+支持的常量有 `pi`、 `e` 和 `phi`，以及计算器上一次计算结果 `ans`。
+
+$$
+\pi = 3.1415926535897932384626434 
+$$
+$$
+e = 2.7182818284590452353602875 
+$$
+$$
+\phi = 1.6180339887498948482045868
+$$
 
 ::: note
 
 计算器不区分大小写，如：`Sin(pi/2)` 与 `sin(Pi/2)` 等价。
+
+`M_PI`、`M_E` 非标准（POSIX 扩展），依赖它容易出问题，可以自己定义。
 
 :::
 
@@ -62,7 +74,7 @@ id     ::= [a-zA-Z]+[0-9]*
 | `sqrt`  | `double sqrt(double x);`            | 平方根        |
 | `cbrt`  | `double cbrt(double x);`            | 立方根（C99+）     |
 
-: 幂运算与开方（Power and Root Functions）{.striped}
+: 开方（Root Functions）{.striped}
 
 
 | 函数名  | 原型                      | 描述               |
