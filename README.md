@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A C/C++ implementation of calculator (REPL) for the bellowing syntax:
+A implementation of expression calculator with C language for the grammar:
 
 ```
 expr   ::= term { ( + | - ) term }

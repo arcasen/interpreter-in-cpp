@@ -185,7 +185,7 @@ void tokonize(Scanner* scanner) {
                 position++;
             }
             type = ID; 
-        } else if (isdigit(ch)) {
+        } else if (isdigit(ch)||ch == '.') {
             // Parse number literal
             const char* str = expression+position;
             char *endptr;
