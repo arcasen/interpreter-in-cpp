@@ -115,7 +115,8 @@ void free_parser(Parser* parser) {
 }
 
 void advance(Parser* parser) {
-    parser->curr = parser->curr->next;
+    if (parser->curr)
+        parser->curr = parser->curr->next;
 }
 
 // Eat expected token

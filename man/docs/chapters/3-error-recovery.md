@@ -1,8 +1,8 @@
 ## Panic Mode 错误恢复 （ Panic Mode Error Recovery ）
 
-在编译原理（Compiler Design）中，Panic Mode（恐慌模式）是一种常见的语法错误恢复策略，主要用于语法分析（Parsing）阶段。 Panic Mode 是处理编译时语法错误的最简单且最流行的方法之一，当解析器遇到无法处理的无效输入时，通过“恐慌”方式快速恢复，继续分析剩余代码，从而避免整个编译过程崩溃。基本思想是一旦检测到错误，语法分析器就“恐慌”起来，认为当前所处的状态（比如正在分析一个结构）已经不可靠了。于是丢弃后续的输入符号（Token），直到找到一个同步点（synchronizing token），然后从该点重新开始分析。
+在编译原理（Compiler Design）中，Panic Mode（恐慌模式）是一种常见的语法错误恢复策略，主要用于语法分析（Parsing）阶段。 Panic Mode 是处理编译时语法错误的最简单且最流行的方法之一，当解析器遇到无法处理的无效输入时，通过“恐慌”方式快速恢复，继续分析剩余代码，从而避免整个编译过程崩溃。基本思想是一旦检测到错误，语法分析器就“恐慌”起来，认为当前所处的状态（比如正在分析一个结构）已经不可靠了。于是丢弃后续的输入符号（Token），直到找到一个同步点（synchronization points），然后从该点重新开始分析。
 
-现在要分析典型的四则运算表达式文法（递归下降风格）的同步点（synchronizing token）。
+现在要分析典型的四则运算表达式文法（递归下降风格）的同步点（synchronization points）。
 通常，同步点会选择在一个非终结符的 FIRST 集或一个规则结束后的 FOLLOW 集中的 Token。  
 
 ### 非终结符的 FIRST 集合 和 FOLLOW 集合
@@ -63,3 +63,168 @@ FOLLOW 集合：
   
 - 过度匹配：FIRST 集往往较大（包含多种可能起点），容易跳过多余输入，丢失上下文或造成新错误。
 不安全：在嵌套结构中（如括号内 expr），用 FIRST 可能误判内部/外部边界，导致栈污染或无限递归。
+
+
+### 使用 FIRST 和 FOLLOW 集检查错误
+
+在递归下降分析中，FIRST 集 用于预测和选择产生式（决定是否进入某个非终结符的解析），而 FOLLOW 集 用于错误恢复和结束验证（同步输入，确保非终结符后跟的符号正确）。同时使用它们能实现更鲁棒的错误检测：FIRST 驱动解析过程，FOLLOW 提供“安全点”来恢复，避免级联错误。
+
+同时使用的核心原理：
+
+- **FIRST 的作用**：在函数入口，检查 lookahead $\in$ FIRST(A) 以选择产生式或进入空产生式。如果不匹配，立即报错并用 FOLLOW 恢复。
+
+- **FOLLOW 的作用**：
+
+  - 对于可空非终结符，函数结束时验证 lookahead $\in$ FOLLOW(A)，检测多余符号。
+  - 错误恢复时，跳过输入直到 lookahead $\in$ FOLLOW(A)，然后重试解析。
+
+
+- **结合优势**：FIRST 确保唯一路径（LL(1)），FOLLOW 提供上下文同步（如在表达式中，FOLLOW(E) 包含 ) 或 $，允许在括号后结束）。
+
+如果文法有多个产生式，使用预测分析表（基于 FIRST/FOLLOW）加速选择。
+
+用 Python 实现了递归下降解析器。该实现针对简单算术表达式文法，并同时使用 FIRST 和 FOLLOW 集进行错误检查和恢复。文法如下：
+
+```ebnf
+E ::= T {+ T}
+T ::= F {* F}
+F :: id | ( E )
+```
+
+Python 代码：
+
+```python{.numberLines}
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens + ['$']  # Add end marker
+        self.pos = 0
+        self.lookahead = self.tokens[self.pos]
+        self.pos += 1
+        self.current_non_terminal = None
+        
+        # Precomputed FIRST and FOLLOW sets for the grammar:
+        # E -> T {+ T}
+        # T -> F {* F}
+        # F -> id | ( E )
+        # Assuming D is replaced by id | ( E ) for a standard expression grammar
+        self.FIRST = {
+            'E': {'id', '('},
+            'T': {'id', '('},
+            'F': {'id', '('}
+        }
+        self.FOLLOW = {
+            'E': {')', '$'},
+            'T': {'+', ')', '$'},
+            'F': {'*', '+', ')', '$'}
+        }
+    
+    def advance(self):
+        if self.pos < len(self.tokens):
+            self.lookahead = self.tokens[self.pos]
+            self.pos += 1
+    
+    def match(self, expected, context=""):
+        if self.lookahead == expected:
+            self.advance()
+            return True
+        else:
+            self.report_error(f"Expected {expected} but got {self.lookahead} ({context})")
+            return False
+    
+    def report_error(self, msg):
+        print(f"Syntax error: {msg} at position {self.pos - 1}, token: {self.lookahead}")
+        return self.sync()
+    
+    def sync(self):
+        while self.lookahead not in self.FOLLOW[self.current_non_terminal]:
+            if self.lookahead == '$':
+                print("Unrecoverable error: end of input")
+                return False
+            self.advance()
+        print(f"Recovery: skipped to FOLLOW symbol {self.lookahead}")
+        return True
+    
+    def parse_E(self):
+        self.current_non_terminal = 'E'
+        if self.lookahead not in self.FIRST['E']:
+            if not self.report_error(f"Unexpected token: {self.lookahead}, expected FIRST(E): {self.FIRST['E']}"):
+                return False
+            return False  # E cannot be empty
+        
+        self.parse_T()
+        # Handle {+ T} loop
+        while self.lookahead == '+':
+            self.match('+', "additive operator")
+            self.parse_T()
+        
+        if self.lookahead not in self.FOLLOW['E'] and self.lookahead != '$':
+            self.report_error(f"Extra token after E: {self.lookahead}, expected FOLLOW(E): {self.FOLLOW['E']}")
+        
+        return True
+    
+    def parse_T(self):
+        self.current_non_terminal = 'T'
+        if self.lookahead not in self.FIRST['T']:
+            self.report_error(f"Unexpected token: {self.lookahead}, expected FIRST(T): {self.FIRST['T']}")
+            return False
+        
+        self.parse_F()
+        # Handle {* F} loop
+        while self.lookahead == '*':
+            self.match('*', "multiplicative operator")
+            self.parse_F()
+        
+        # 新增：FOLLOW 检查（结束验证）
+        if self.lookahead not in self.FOLLOW['T'] and self.lookahead != '$':
+            self.report_error(f"Extra token after T: {self.lookahead}, expected FOLLOW(T): {self.FOLLOW['T']}")
+        
+        return True
+    
+    def parse_F(self):
+        self.current_non_terminal = 'F'
+        if self.lookahead not in self.FIRST['F']:
+            self.report_error(f"Unexpected token: {self.lookahead}, expected FIRST(F): {self.FIRST['F']}")
+            return False
+        
+        if self.lookahead == 'id':
+            self.match('id', "factor identifier")
+        elif self.lookahead == '(':
+            self.match('(', "left parenthesis")
+            self.parse_E()
+            self.match(')', "right parenthesis")
+        else:
+            # Should not reach here due to FIRST check, but handle
+            return False
+        
+        # 新增：FOLLOW 检查（结束验证）
+        if self.lookahead not in self.FOLLOW['F'] and self.lookahead != '$':
+            self.report_error(f"Extra token after F: {self.lookahead}, expected FOLLOW(F): {self.FOLLOW['F']}")
+        
+        return True
+    
+    def parse(self):
+        success = self.parse_E()
+        if success and self.lookahead == '$':
+            print("Parse successful")
+            return True
+        else:
+            if self.lookahead != '$':
+                self.report_error(f"Extra input after end: {self.lookahead}")
+            print("Parse failed")
+            return False
+```
+
+### 避免同一位置多次报错的策略
+
+递归下降解析器（Recursive Descent Parser）是一种自顶向下的LL(1)解析方法，每个非终结符对应一个函数。这种设计简单且易于实现，但错误处理是一个常见挑战：当输入token序列出现语法错误时，多个递归调用的函数可能会在**同一位置（即同一个token）**检测到错误，并反复报告相同的错误信息，导致输出冗余和混乱。
+例如，在解析表达式时，如果遇到意外的token（如缺少操作数），expr、term、unary 等函数都可能在同一处报错：“Expected operand after '+'”。
+
+**核心问题原因**
+
+- 级联错误：错误传播到上层函数，导致多层函数都尝试报告。
+- 无状态跟踪：默认实现中，每个函数独立检查当前token，而不共享错误状态。
+
+**解决方案**
+
+避免多次报错的关键是错误恢复（Error Recovery）和状态管理。
+

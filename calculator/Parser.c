@@ -101,9 +101,72 @@ Parser* create_parser(const char* expression) {
     return parser; 
 }
 
+void free_parser(Parser* parser) {
+    if (parser) {
+        free_scanner(parser->scanner);
+        free_ast(parser->ast);
+        free(parser);
+    }
+}
+
+void advance(Parser* parser) {
+    if (parser->curr)
+        parser->curr = parser->curr->next;
+}
+
+// Eat expected token
+int expect(Parser* parser, TokenType expected) {
+    if (parser->curr && parser->curr->token->type == expected) {
+        return 1;
+    }
+    return 0;
+}
+
+// Report syntax error
+void report_error(Parser* parser, const char* msg) {
+    //if (// parser->stop_error_report) return; // already reported
+    parser->status = 0;
+    if (parser->curr) {
+        int position = parser->curr->token->position + 1;
+        fprintf(stderr, "Syntax Error: %s at position: %d\n", msg, position);
+    }
+}
+
+int is_token_in_set(TokenType type, TokenType set[], int size) {
+    for (int i = 0; i < size; i++) {
+        if (type == set[i])
+            return 1;
+    }
+    return 0;
+}
+
+// Painic mode error recovery
+void error_recovery(Parser* parser, TokenType followset[], int followset_size) {
+    parser->status = 0;
+    advance(parser); // skip 
+    // 垃圾处理：panic-mode 恢复，跳过到同步点（该非终结点的 FLLOW 集）
+    while (parser->curr && 
+            !is_token_in_set(parser->curr->token->type, 
+            followset, followset_size)) {
+        advance(parser);
+    }
+}
+
+int expect_tokens(Parser* parser, TokenType set[], int size) {
+    if (parser->curr && 
+            !is_token_in_set(parser->curr->token->type, set, size)) {
+        // if (parser->curr->token->type != EOL) 
+        //     report_error(parser, "Unexpected symbol");
+        return 0;
+    }
+    return 1;
+}
+
+// Parser entry
 void parse(Parser* parser) {
     if (parser->scanner->status) {
         parser->ast = parse_expr(parser);
+        // 最终检查：应该到达输入结束
         if (parser->curr && parser->curr->token->type != EOL) {
             report_error(parser, "Unexpected symbol");
         }
@@ -117,71 +180,29 @@ void parse(Parser* parser) {
     #endif
 }
 
-void free_parser(Parser* parser) {
-    if (parser) {
-        free_scanner(parser->scanner);
-        free_ast(parser->ast);
-        free(parser);
-    }
-}
-
-void advance(Parser* parser) {
-    parser->curr = parser->curr->next;
-}
-
-// Eat expected token
-int expect(Parser* parser, TokenType expected) {
-    if (parser->curr && parser->curr->token->type == expected) {
-        return 1;
-    }
-    return 0;
-}
-
-// Report syntax error
-void report_error(Parser* parser, const char* msg) {
-    // if (!parser->status) return; // already reported
-    parser->status = 0;
-    if (parser->curr && parser->curr->token->type != EOL) {
-        int position = parser->curr->token->position + 1;
-        fprintf(stderr, 
-            "Syntax Error: %s near '%s' at position: %d\n", 
-            msg, parser->curr->token->literal, position);
-    } else {
-        int position = strlen(parser->expression) + 1;
-        fprintf(stderr, "Syntax Error: %s at position: %d\n", msg, position);
-    }
-}
-
-int is_in_set(TokenType type, TokenType followset[], int set_size) {
-    for (int i = 0; i < set_size; i++) {
-        if (type == followset[i])
-            return 1;
-    }
-    return 0;
-}
-
-// Painic mode error recovery
-void error_recovery(Parser* parser, TokenType followset[], int set_size) {
-    parser->status = 0;
-    // 垃圾处理：panic-mode 恢复，跳过到同步点（该非终结点的 FLLOW 集）
-    while (parser->curr && 
-            !is_in_set(parser->curr->token->type, followset, set_size)) {
-        advance(parser);
-    }
-}
-
 // expr ::= term { ( "+" | "-" ) term }
 AstNode* parse_expr(Parser* parser) {
     #ifdef DEBUG
     debug(__func__, parser);
     #endif
 
-    TokenType followset[] = {LPAREN, EOL};
-    int set_size = sizeof(followset) / sizeof(followset[0]);
+    TokenType firstset[] = {PLUS, MINUS, LPAREN, ID, INTEGER, FLOAT};
+    int firstset_size = sizeof(firstset) / sizeof(firstset[0]);
+    TokenType followset[] = {RPAREN, EOL};
+    int followset_size = sizeof(followset) / sizeof(followset[0]);
 
+    // 检查当前 token 是否在 FIRST(expr) 中
+    if (!expect_tokens(parser, firstset, firstset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        return NULL;
+    }
+
+    // process first term
     AstNode* left = parse_term(parser);
     if (!left) return NULL;
 
+    // process ( + | -)  term
     while (parser->curr && (parser->curr->token->type == PLUS || 
             parser->curr->token->type == MINUS)) {
         Token* token = parser->curr->token;
@@ -194,8 +215,15 @@ AstNode* parse_expr(Parser* parser) {
             left = operator; // new left 
         } else {
             report_error(parser, "Expected right operand");
-            error_recovery(parser, followset, set_size);
+            error_recovery(parser, followset, followset_size);
         }
+    }
+
+    // 检查 expr 的结束：当前 token 应该在 FOLLOW(expr) 中
+    if (!expect_tokens(parser, followset, followset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
     }
 
     return left;
@@ -206,9 +234,17 @@ AstNode* parse_term(Parser* parser) {
     #ifdef DEBUG
     debug(__func__, parser);
     #endif
+    
+    TokenType firstset[] = {PLUS, MINUS, LPAREN, ID, INTEGER, FLOAT};
+    int firstset_size = sizeof(firstset) / sizeof(firstset[0]);
+    TokenType followset[] = {PLUS, MINUS, RPAREN, EOL};
+    int followset_size = sizeof(followset) / sizeof(followset[0]);
 
-    TokenType followset[] = {PLUS, MINUS, LPAREN, EOL};
-    int set_size = sizeof(followset) / sizeof(followset[0]);
+    if (!expect_tokens(parser, firstset, firstset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        return NULL;
+    }
 
     AstNode* left = parse_unary(parser);
     if (!left) return NULL;
@@ -225,8 +261,14 @@ AstNode* parse_term(Parser* parser) {
             left = operator; // new left 
         } else {
             report_error(parser, "Expected right operand");
-            error_recovery(parser, followset, set_size);
+            error_recovery(parser, followset, followset_size);
         }
+    }
+
+    if (!expect_tokens(parser, followset, followset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
     }
     
     return left;
@@ -238,8 +280,16 @@ AstNode* parse_unary(Parser* parser) {
     debug(__func__, parser);
     #endif
 
-    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
-    int set_size = sizeof(followset) / sizeof(followset[0]);
+    TokenType firstset[] = {PLUS, MINUS, LPAREN, ID, INTEGER, FLOAT};
+    int firstset_size = sizeof(firstset) / sizeof(firstset[0]);
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, RPAREN, EOL};
+    int followset_size = sizeof(followset) / sizeof(followset[0]);
+
+    if (!expect_tokens(parser, firstset, firstset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        return NULL;
+    }
 
     AstNode* left = NULL;
 
@@ -254,10 +304,16 @@ AstNode* parse_unary(Parser* parser) {
             left = operator;
         } else {
             report_error(parser, "Expected unary operand");
-            error_recovery(parser, followset, set_size);
+            error_recovery(parser, followset, followset_size);
         }
     } else {
         left = parse_power(parser);
+    }
+
+    if (!expect_tokens(parser, followset, followset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
     }
     
     return left;
@@ -269,8 +325,16 @@ AstNode* parse_power(Parser* parser) {
     debug(__func__, parser);
     #endif
 
-    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
-    int set_size = sizeof(followset) / sizeof(followset[0]);
+    TokenType firstset[] = {LPAREN, ID, INTEGER, FLOAT};
+    int firstset_size = sizeof(firstset) / sizeof(firstset[0]);
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, RPAREN, EOL};
+    int followset_size = sizeof(followset) / sizeof(followset[0]);
+
+    if (!expect_tokens(parser, firstset, firstset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        return NULL;
+    }
 
     AstNode* left = parse_factor(parser);
 
@@ -285,8 +349,14 @@ AstNode* parse_power(Parser* parser) {
             left = operator;
         } else {
             report_error(parser, "Expected right operand");
-            error_recovery(parser, followset, set_size);
+            error_recovery(parser, followset, followset_size);
         }
+    }
+
+    if (!expect_tokens(parser, followset, followset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
     }
     
     return left;
@@ -298,8 +368,16 @@ AstNode* parse_factor(Parser* parser) {
     debug(__func__, parser);
     #endif
 
-    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, LPAREN, EOL};
-    int set_size = sizeof(followset) / sizeof(followset[0]);
+    TokenType firstset[] = {LPAREN, ID, INTEGER, FLOAT};
+    int firstset_size = sizeof(firstset) / sizeof(firstset[0]);
+    TokenType followset[] = {PLUS, MINUS, MULT, DIV, POW, RPAREN, EOL};
+    int followset_size = sizeof(followset) / sizeof(followset[0]);
+
+    if (!expect_tokens(parser, firstset, firstset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        return NULL;
+    }
 
     if (!parser->curr) {
         report_error(parser, "Terminated abnormally");
@@ -307,51 +385,59 @@ AstNode* parse_factor(Parser* parser) {
     }
 
     Token* token = parser->curr->token;
+    AstNode* node = NULL;
     if (token->type == FLOAT) {
-        AstNode* node = create_ast_node(token);
+        node = create_ast_node(token);
         advance(parser);
-        return node;
+        // return node;
     } else if (token->type == INTEGER) {
-        AstNode* node = create_ast_node(token);
+        node = create_ast_node(token);
         advance(parser);
-        return node;
+        // return node;
     } else if (token->type == LPAREN) {
         advance(parser);
-        AstNode* node = parse_expr(parser);
+        node = parse_expr(parser);
         if (node && expect(parser, RPAREN)) {
             advance(parser);
-            return node;
+            // return node;
         } else {
             report_error(parser, "Expected ')'");
-            error_recovery(parser, followset, set_size);
-            return node;  // 返回已解析的部分
+            error_recovery(parser, followset, followset_size);
+            // return node;  // 返回已解析的部分
         }
     } else if (token->type == ID) {
         TokenListNode* next_token = parser->curr->next;
 
         if (next_token && next_token->token->type == LPAREN) { // function call
-            AstNode* node = create_ast_node(token);
+            node = create_ast_node(token);
             advance(parser); // function name
             advance(parser); // LPAREN
             AstNode* arg = parse_expr(parser);
             if (arg && expect(parser, RPAREN)) {
                 add_child(node, arg);
                 advance(parser);
-                return node;
+                // return node;
             } else {
                 report_error(parser, "Expected ')'");
-                error_recovery(parser, followset, set_size);
-                return node;  // 返回已解析的部分
+                error_recovery(parser, followset, followset_size);
+                // return node;  // 返回已解析的部分
             } 
         } else { // constant
-            AstNode* node = create_ast_node(token);
+            node = create_ast_node(token);
             advance(parser);
-            return node;
+            // return node;
         }
     } else {
-        report_error(parser, "Expected number or '('");
-        error_recovery(parser, followset, set_size);
-        return NULL;
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
     }
-    return NULL;
+
+    if (!expect_tokens(parser, followset, followset_size)) {
+        report_error(parser, "Unexpected symbol");
+        error_recovery(parser, followset, followset_size);
+        // return NULL;
+    }
+
+    return node;
 }
