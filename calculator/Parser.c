@@ -143,7 +143,6 @@ int is_token_in_set(TokenType type, TokenType set[], int size) {
 // Painic mode error recovery
 void error_recovery(Parser* parser, TokenType followset[], int followset_size) {
     parser->status = 0;
-    advance(parser); // skip 
     // 垃圾处理：panic-mode 恢复，跳过到同步点（该非终结点的 FLLOW 集）
     while (parser->curr && 
             !is_token_in_set(parser->curr->token->type, 

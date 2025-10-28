@@ -183,4 +183,6 @@ FOLLOW(A) 表示可能紧跟在 A 后的终结符集合（包括 `$`）。算法
 | power    | `{ (, id, integer, float }`       | `{ +, −, *, /, ^, $, ) }` |
 | factor   | `{ (, id, integer, float }`       | `{ +, −, *, /, ^, $, ) }` |
 
+: 文法非终结符的 FIRST 和 FOLLOW 集
+
 该文法满足 LL(1) 条件（FIRST 集两两不相交，FOLLOW 中无冲突），可用于自顶向下解析。
