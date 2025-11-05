@@ -8,7 +8,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <float.h>
 #include "Scanner.h"
+#include "strext.h"
 
 Token* create_token(TokenType type, const char *src, 
         int position, int size) {
@@ -187,17 +191,32 @@ void tokonize(Scanner* scanner) {
             type = ID; 
         } else if (isdigit(ch)||ch == '.') {
             // Parse number literal
-            const char* str = expression+position;
+            const char* str = expression + position;
             char *endptr;
             strtod(str, &endptr);
-            type = INTEGER; 
-            for (const char *p = str; p < endptr; p++) {
-                if (*p == '.' || *p == 'e' || *p == 'E') {
-                    type = FLOAT;
-                    break;
+            
+            // 检查合法性
+            if (endptr == str) { // for example: "."
+                fprintf(stderr, "Illeagal number at position: %d.\n", start+1);
+                position++; // advance
+                type = ERROR;
+            } else {
+                if (errno == ERANGE) {
+                    fprintf(stderr, "Out of range (-%.16e, %.16e) at position: %d.\n", 
+                        DBL_MAX, DBL_MAX, start+1);
+                    errno = 0; // reset
+                    type = ERROR;
+                } else { 
+                    type = INTEGER; 
+                    for (const char *p = str; p < endptr; p++) {
+                        if (*p == '.' || *p == 'e' || *p == 'E') {
+                            type = FLOAT;
+                            break;
+                        }
+                    }
                 }
+                position = (endptr - str) + start; // advance
             }
-            position = (endptr - str) + start;
         }else {
             // Operators and parentheses
             switch (ch) {
@@ -209,9 +228,8 @@ void tokonize(Scanner* scanner) {
                 case '(': type = LPAREN; break;
                 case ')': type = RPAREN; break;
                 default:
-                    scanner->status = 0;
                     fprintf(stderr, 
-                        "Unexpected character: '%c' at position: %d.\n", 
+                        "Illeagal character: '%c' at position: %d.\n", 
                         ch, position+1);      
             }
             // Don't stop the scanner even encountering error
@@ -219,8 +237,12 @@ void tokonize(Scanner* scanner) {
             position++;  
         }
 
+        if (type == ERROR) {
+            scanner->status = 0;
+        }
+
         // Append to list
-        if (type != EOL) {
+        if (type != EOL && type != ERROR) {
             token = create_token(type, expression, start, position-start);
             append_token(scanner->token_list, create_list_node(token));
             // if (type == FLOAT || type == INTEGER) { // 处理是否存在符号

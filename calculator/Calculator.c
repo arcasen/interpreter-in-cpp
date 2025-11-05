@@ -2,8 +2,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <strings.h>
 #include <math.h>
+#include "strext.h"
 #include "Calculator.h"
 
 #ifndef M_PI

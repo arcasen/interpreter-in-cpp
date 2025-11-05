@@ -5,3 +5,5 @@ dist/
 .repl_history
 calc
 calc.exe
+
+build/

@@ -3,6 +3,7 @@
 
 // Token types
 typedef enum {
+    ERROR,
     FLOAT,
     INTEGER,
     PLUS,
@@ -17,6 +18,7 @@ typedef enum {
 } TokenType;
 
 static const char* TokenName[] = {
+    "ERROR",
     "FLOAT",
     "INTEGER",
     "PLUS",

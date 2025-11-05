@@ -1,6 +1,6 @@
 ---
 documentclass: ctexbook
-title: 表达式计算器设计
+title: 构造表达式计算器
 author: arcasen
 publisher: <https://github.com/arcasen/interpreter-in-cpp>
 # title-page: title-page.tex
@@ -20,3 +20,5 @@ lang: zh
 ![[ chapters/5-function-call.md ]]
 
 ![[ chapters/6-repl.md ]]
+
+![[ chapters/7-linenoise.md ]]
