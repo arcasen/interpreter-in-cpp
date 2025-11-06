@@ -28,7 +28,8 @@ int strncasecmp(const char *s1, const char *s2, size_t n)
     return (s1[i] - s2[i]); // 处理长度差异
 }
 
-char *strndup(const char *s, size_t n) {
+char *strndup(const char *s, size_t n)
+{
     size_t len = strnlen(s, n);
     char *new_str = (char *)malloc(len + 1);
     if (new_str == NULL) {
@@ -40,7 +41,7 @@ char *strndup(const char *s, size_t n) {
 }
 
 // char* strdup(const char* s) {
-    // return strndup(s, strlen(s));
+// return strndup(s, strlen(s));
 // }
 
 #endif // _MSVC

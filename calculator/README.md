@@ -13,3 +13,24 @@ power  ::= factor { ^ unary }
 factor ::= ( expr ) | id ( expr ) | id | integer | float
 id     ::= [a-zA-Z]+[0-9]*
 ```
+
+## Compile
+
+GCC/Clang:
+
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+MSVC:
+
+```bash
+mkdir build
+cd build
+cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+vcvarsall.bat
+nmake
+```

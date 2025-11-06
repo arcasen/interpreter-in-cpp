@@ -1,28 +1,29 @@
-//#define _USE_MATH_DEFINES
+// #define _USE_MATH_DEFINES
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include "strext.h"
 #include "Calculator.h"
+#include "strext.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef M_PI
-#define M_PI  3.1415926535897932384626434
+#define M_PI 3.1415926535897932384626434
 #endif
 #ifndef M_E
-#define M_E   2.7182818284590452353602875
+#define M_E 2.7182818284590452353602875
 #endif
 #ifndef M_PHI
 #define M_PHI 1.6180339887498948482045868
 #endif
 
-double eval(Calculator* calculator, AstNode* ast);
-double perform_operation(Calculator* calculator, AstNode* ast);
-double function_call(Calculator* calculator, AstNode* ast);
-double fetch_constant(Calculator* calculator, AstNode* ast);
+double eval(Calculator *calculator, AstNode *ast);
+double perform_operation(Calculator *calculator, AstNode *ast);
+double function_call(Calculator *calculator, AstNode *ast);
+double fetch_constant(Calculator *calculator, AstNode *ast);
 
-Calculator* create_calculator() {
-    Calculator* calculator = (Calculator*) malloc(sizeof(Calculator));
+Calculator *create_calculator()
+{
+    Calculator *calculator = (Calculator *)malloc(sizeof(Calculator));
     calculator->expression = NULL;
     calculator->status = 1;
     calculator->ans = 0.0;
@@ -30,14 +31,16 @@ Calculator* create_calculator() {
     return calculator;
 }
 
-void free_calculator(Calculator* calculator) {
+void free_calculator(Calculator *calculator)
+{
     if (calculator) {
         free_parser(calculator->parser);
         free(calculator);
     }
 }
 
-void recreate_parser(Calculator* calculator, const char* expression) {
+void recreate_parser(Calculator *calculator, const char *expression)
+{
     // Release previous parser
     if (calculator->parser) {
         free_parser(calculator->parser);
@@ -50,20 +53,22 @@ void recreate_parser(Calculator* calculator, const char* expression) {
     parse(calculator->parser);
 }
 
-double calculate(Calculator* calculator) {
+double calculate(Calculator *calculator)
+{
     double ans = 0.0;
     if (calculator->parser && calculator->parser->status) {
         ans = eval(calculator, calculator->parser->ast);
-        if (calculator->status) 
-            calculator->ans= ans; // update
+        if (calculator->status)
+            calculator->ans = ans; // update
     } else {
         calculator->status = 0;
-    } 
+    }
     return ans;
 }
 
-double eval(Calculator* calculator, AstNode* ast) {
-    char* endptr;
+double eval(Calculator *calculator, AstNode *ast)
+{
+    char *endptr;
     if (ast->token->type == FLOAT) {
         return strtod(ast->token->literal, &endptr);
     } else if (ast->token->type == INTEGER) {
@@ -75,42 +80,52 @@ double eval(Calculator* calculator, AstNode* ast) {
             return fetch_constant(calculator, ast);
         }
     } else {
-        return perform_operation(calculator, ast); 
+        return perform_operation(calculator, ast);
     }
     return 0.0;
 }
 
-double perform_operation(Calculator* calculator, AstNode* ast)  {
+double perform_operation(Calculator *calculator, AstNode *ast)
+{
     double left = eval(calculator, ast->firstChild);
-    if (!calculator->status) return 0.0;
+    if (!calculator->status)
+        return 0.0;
 
     double right = 0.0;
     int is_unary = 1;
-    
+
     if (ast->firstChild->nextSibling) {
         right = eval(calculator, ast->firstChild->nextSibling);
-        if (!calculator->status) return 0.0;
+        if (!calculator->status)
+            return 0.0;
         is_unary = 0;
     }
-        
-    switch(ast->token->type) {
-        case PLUS: 
-            if (is_unary) return left;
-            return left + right;
-        case MINUS: 
-            if (is_unary) return - left;
-            return left - right;
-        case MULT: return left * right;
-        case DIV: return left / right;
-        case POW: return pow(left, right);
-        default: fprintf(stderr, "Unkown operation: %s!\n", 
+
+    switch (ast->token->type) {
+    case PLUS:
+        if (is_unary)
+            return left;
+        return left + right;
+    case MINUS:
+        if (is_unary)
+            return -left;
+        return left - right;
+    case MULT:
+        return left * right;
+    case DIV:
+        return left / right;
+    case POW:
+        return pow(left, right);
+    default:
+        fprintf(stderr, "Unkown operation: %s!\n",
             ast->token->literal);
-            calculator->status = 0;
+        calculator->status = 0;
     }
     return 0.0;
 }
 
-double function_call(Calculator* calculator, AstNode* ast) {
+double function_call(Calculator *calculator, AstNode *ast)
+{
     double (*func_ptr)(double);
     if (strcasecmp(ast->token->literal, "sin") == 0) {
         func_ptr = sin;
@@ -160,12 +175,13 @@ double function_call(Calculator* calculator, AstNode* ast) {
     }
 
     double arg = eval(calculator, ast->firstChild);
-    if (calculator->status) 
+    if (calculator->status)
         return func_ptr(arg);
     return 0.0;
 }
 
-double fetch_constant(Calculator* calculator, AstNode* ast) {
+double fetch_constant(Calculator *calculator, AstNode *ast)
+{
     if (strcasecmp(ast->token->literal, "ans") == 0) {
         return calculator->ans;
     } else if (strcasecmp(ast->token->literal, "pi") == 0) {
