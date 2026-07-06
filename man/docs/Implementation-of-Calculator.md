@@ -21,4 +21,4 @@ lang: zh
 
 ![[ chapters/6-repl.md ]]
 
-![[ chapters/7-linenoise.md ]]
+<!-- ![[ chapters/7-linenoise.md ]] -->
